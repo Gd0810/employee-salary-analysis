@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Salary Predictor{% endblock %}
+{% block page_title %}Salary Prediction Model{% endblock %}
+{% block page_sub %}Predict base salary using Random Forest + Ridge Regression ensemble{% endblock %}
+{% block content %}
+
+<div class="grid-2">
+  <!-- Input Form -->
+  <div class="card">
+    <div class="card-header"><h3>Enter Employee Details</h3></div>
+    <div class="pred-form">
+      <div class="form-group">
+        <label>Sector</label>
+        <select id="pred-sector" onchange="updateDeptOptions()">
+          <option value="Private">Private</option>
+          <option value="Government">Government</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <select id="pred-dept"></select>
+      </div>
+      <div class="form-group">
+        <label>Gender</label>
+        <select id="pred-gender">
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Pay Grade</label>
+        <select id="pred-grade"></select>
+      </div>
+      <div class="form-group">
+        <label>Earns Overtime?</label>
+        <select id="pred-ot">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Earns Longevity Pay?</label>
+        <select id="pred-lon">
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+      <button class="btn-predict" onclick="runPrediction()">🔮 Predict Salary</button>
+    </div>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="card" id="pred-results" style="display:none">
+    <div class="card-header"><h3>Prediction Results</h3></div>
+    <div class="pred-main-result">
+      <div class="pred-label">Ensemble Prediction</div>
+      <div class="pred-value" id="pred-ensemble">--</div>
+      <div class="pred-sub" id="pred-sub">--</div>
+    </div>
+    <div class="grid-2" style="gap:10px;margin:16px 0">
+      <div class="model-box purple">
+        <div class="model-name">🌲 Random Forest</div>
+        <div class="model-val" id="pred-rf">--</div>
+        <div class="model-r2" id="rf-r2">R² --</div>
+      </div>
+      <div class="model-box teal">
+        <div class="model-name">📐 Ridge Regression</div>
+        <div class="model-val" id="pred-ridge">--</div>
+        <div class="model-r2" id="ridge-r2">R² --</div>
+      </div>
+    </div>
+    <div class="stat-list" id="pred-stats"></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Model Performance Metrics</h3></div>
+  <div class="grid-2">
+    <div class="chart-wrap" style="height:260px"><canvas id="modelMetricsChart" role="img" aria-label="Model metrics comparison"></canvas></div>
+    <div>
+      <h4 style="margin-bottom:12px;font-size:14px">Feature Importance (Random Forest)</h4>
+      <div id="feat-imp-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>How the Model Works</h3></div>
+  <div class="model-explain">
+    <div class="explain-step">
+      <div class="step-num">1</div>
+      <div><strong>Input Features</strong><br>Department, Gender, Grade, Sector, Overtime flag, Longevity flag, Dept avg salary</div>
+    </div>
+    <div class="explain-step">
+      <div class="step-num">2</div>
+      <div><strong>Random Forest</strong><br>150 decision trees (max depth 12). Captures non-linear relationships between grade/department and salary.</div>
+    </div>
+    <div class="explain-step">
+      <div class="step-num">3</div>
+      <div><strong>Ridge Regression</strong><br>Regularised linear model (α=10). Fast and interpretable baseline with standardised features.</div>
+    </div>
+    <div class="explain-step">
+      <div class="step-num">4</div>
+      <div><strong>Ensemble</strong><br>Final prediction = RF×65% + Ridge×35%. Blends accuracy of RF with stability of Ridge.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let opts = {};
+
+window.addEventListener("DOMContentLoaded", async () => {
+  opts = await fetch("/api/options").then(r => r.json());
+  updateDeptOptions();
+  loadModelMetrics();
+});
+
+function updateDeptOptions() {
+  const sector = document.getElementById("pred-sector").value;
+  const depts  = sector === "Private" ? opts.private_depts : opts.govt_depts;
+  const grades = sector === "Private" ? opts.private_grades : opts.govt_grades;
+
+  document.getElementById("pred-dept").innerHTML  = depts.map(d  => `<option value="${d}">${d}</option>`).join("");
+  document.getElementById("pred-grade").innerHTML = grades.map(g => `<option value="${g}">${g}</option>`).join("");
+}
+
+async function runPrediction() {
+  const payload = {
+    sector:       document.getElementById("pred-sector").value,
+    department:   document.getElementById("pred-dept").value,
+    gender:       document.getElementById("pred-gender").value,
+    grade:        document.getElementById("pred-grade").value,
+    has_overtime: document.getElementById("pred-ot").value,
+    has_longevity:document.getElementById("pred-lon").value,
+  };
+
+  const res = document.getElementById("pred-results");
+  res.style.display = "block";
+  document.getElementById("pred-ensemble").textContent = "Calculating…";
+
+  const d = await fetch("/api/predict", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }).then(r => r.json());
+
+  if (d.error) { alert("Error: " + d.error); return; }
+
+  document.getElementById("pred-ensemble").textContent = money(d.ensemble);
+  const diffPct = ((d.ensemble - d.dept_avg) / d.dept_avg * 100).toFixed(1);
+  document.getElementById("pred-sub").textContent = `${diffPct > 0 ? "+" : ""}${diffPct}% vs department average (${money(d.dept_avg)})`;
+  document.getElementById("pred-rf").textContent    = money(d.rf_prediction);
+  document.getElementById("pred-ridge").textContent = money(d.ridge_prediction);
+  document.getElementById("rf-r2").textContent      = `R² ${d.rf_r2}  |  MAE ${money(d.rf_mae)}`;
+  document.getElementById("ridge-r2").textContent   = `R² ${d.ridge_r2}`;
+
+  document.getElementById("pred-stats").innerHTML = `
+    <div class="stat-row"><span>Department avg</span><span>${money(d.dept_avg)}</span></div>
+    <div class="stat-row"><span>RF prediction</span><span>${money(d.rf_prediction)}</span></div>
+    <div class="stat-row"><span>Ridge prediction</span><span>${money(d.ridge_prediction)}</span></div>
+    <div class="stat-row"><span>Ensemble (final)</span><span><strong>${money(d.ensemble)}</strong></span></div>`;
+}
+
+async function loadModelMetrics() {
+  const d = await fetch("/api/predict", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sector:"Private", department:"IT", gender:"M", grade:"10", has_overtime:0, has_longevity:0 })
+  }).then(r => r.json());
+
+  new Chart(document.getElementById("modelMetricsChart"), {
+    type: "bar",
+    data: {
+      labels: ["R² Score", "MAE ($K)"],
+      datasets: [
+        { label: "Random Forest", data: [d.rf_r2 * 100, d.rf_mae / 1000], backgroundColor: "#534AB7", borderRadius: 6 },
+        { label: "Ridge",         data: [d.ridge_r2 * 100, 0],             backgroundColor: "#1D9E75", borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { y: { ticks: { callback: v => v + "" } } } }
+  });
+
+  // Feature importance (hardcoded from training — update after running train_models.py)
+  const imp = [
+    { f: "Dept Avg Salary", v: 0.62 }, { f: "Dept (encoded)", v: 0.15 },
+    { f: "Grade Numeric",   v: 0.10 }, { f: "Dept Name (enc)", v: 0.07 },
+    { f: "Sector",          v: 0.03 }, { f: "Gender",          v: 0.02 },
+    { f: "Overtime Flag",   v: 0.01 }, { f: "Grade (enc)",     v: 0.00 },
+  ];
+  document.getElementById("feat-imp-list").innerHTML = imp.map(i => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:12px;min-width:120px;color:var(--text-muted)">${i.f}</span>
+      <div style="flex:1;height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden">
+        <div style="height:100%;width:${i.v * 100}%;background:#534AB7;border-radius:5px"></div>
+      </div>
+      <span style="font-size:12px;font-weight:600;min-width:36px">${(i.v * 100).toFixed(0)}%</span>
+    </div>`).join("");
+}
+</script>
+{% endblock %}

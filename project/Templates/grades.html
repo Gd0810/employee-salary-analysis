@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Pay Grades{% endblock %}
+{% block page_title %}Pay Grade Analysis{% endblock %}
+{% block page_sub %}How salary changes across pay grades and bands{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3>Avg Salary by Pay Grade</h3>
+    <div class="filter-row">
+      <select id="gradeSector" onchange="loadGrades()">
+        <option value="All">All Sectors</option>
+        <option value="Private">Private</option>
+        <option value="Government">Government</option>
+      </select>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:320px"><canvas id="gradeLineChart" role="img" aria-label="Line chart of salary by grade"></canvas></div>
+</div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Grade Salary Range (Min–Max)</h3></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="gradeRangeChart" role="img" aria-label="Bar chart of salary range by grade"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Employee Count per Grade</h3></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="gradeCountChart" role="img" aria-label="Bar chart of headcount per grade"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Grade Summary Table</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Sector</th><th>Grade</th><th>Avg Base</th><th>Avg Total</th><th>Min</th><th>Max</th><th>Count</th></tr></thead>
+      <tbody id="gradeTbody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let gradeLineChart=null, gradeRangeChart=null, gradeCountChart=null;
+
+async function loadGrades() {
+  const sector = document.getElementById("gradeSector").value;
+  const data   = await fetch(`/api/grades?sector=${sector}`).then(r=>r.json());
+
+  const numeric = data.filter(d=>d.Grade_Numeric>0).sort((a,b)=>a.Grade_Numeric-b.Grade_Numeric);
+  const labels  = [...new Set(numeric.map(d=>d.Grade))];
+
+  const privData = numeric.filter(d=>d.Sector==="Private");
+  const govtData = numeric.filter(d=>d.Sector==="Government");
+
+  if (gradeLineChart) gradeLineChart.destroy();
+  gradeLineChart = new Chart(document.getElementById("gradeLineChart"),{
+    type:"line",
+    data:{
+      labels: [...new Set(numeric.map(d=>d.Grade_Numeric))],
+      datasets:[
+        {label:"Private",data:privData.map(d=>d.avg_base),borderColor:"#534AB7",backgroundColor:"rgba(83,74,183,.1)",fill:true,tension:.3,pointRadius:4},
+        {label:"Government",data:govtData.map(d=>d.avg_base),borderColor:"#1D9E75",backgroundColor:"rgba(29,158,117,.1)",fill:true,tension:.3,pointRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}},x:{title:{display:true,text:"Grade (numeric)"}}}}
+  });
+
+  if (gradeRangeChart) gradeRangeChart.destroy();
+  const top15 = numeric.slice(0,15);
+  gradeRangeChart = new Chart(document.getElementById("gradeRangeChart"),{
+    type:"bar",
+    data:{
+      labels: top15.map(d=>d.Grade),
+      datasets:[
+        {label:"Min Salary",data:top15.map(d=>d.min_salary),backgroundColor:"#EF9F27",borderRadius:4},
+        {label:"Max Salary",data:top15.map(d=>d.max_salary),backgroundColor:"#534AB7",borderRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+
+  if (gradeCountChart) gradeCountChart.destroy();
+  gradeCountChart = new Chart(document.getElementById("gradeCountChart"),{
+    type:"bar",
+    data:{
+      labels: top15.map(d=>d.Grade),
+      datasets:[{label:"Employees",data:top15.map(d=>d.count),backgroundColor:"#1D9E75",borderRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>fmt(v)}}}}
+  });
+
+  document.getElementById("gradeTbody").innerHTML = data.map(d=>`
+    <tr>
+      <td><span class="badge ${d.Sector==='Private'?'badge-purple':'badge-teal'}">${d.Sector}</span></td>
+      <td><strong>${d.Grade}</strong></td>
+      <td class="num">${money(d.avg_base)}</td>
+      <td class="num">${money(d.avg_total)}</td>
+      <td class="num">${money(d.min_salary)}</td>
+      <td class="num">${money(d.max_salary)}</td>
+      <td>${fmt(d.count)}</td>
+    </tr>`).join("");
+}
+
+window.addEventListener("DOMContentLoaded", ()=>loadGrades());
+</script>
+{% endblock %}

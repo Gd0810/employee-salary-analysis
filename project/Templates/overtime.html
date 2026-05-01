@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Overtime Analysis{% endblock %}
+{% block page_title %}Overtime Analysis{% endblock %}
+{% block page_sub %}Who earns overtime, how much, and which departments lead{% endblock %}
+{% block content %}
+
+<div class="kpi-grid" id="ot-kpis"></div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Avg Overtime Pay by Sector</h3></div>
+    <div class="chart-wrap" style="height:260px"><canvas id="otSectorChart" role="img" aria-label="Bar chart of overtime by sector"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Overtime by Gender</h3></div>
+    <div class="chart-wrap" style="height:260px"><canvas id="otGenderChart" role="img" aria-label="Bar chart of overtime by gender"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header">
+    <h3>Top Overtime Departments</h3>
+    <div class="filter-row">
+      <select id="otSector" onchange="loadOT()">
+        <option value="All">All Sectors</option>
+        <option value="Private">Private</option>
+        <option value="Government">Government</option>
+      </select>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:360px"><canvas id="otDeptChart" role="img" aria-label="Horizontal bar of overtime by department"></canvas></div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Overtime Department Summary Table</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Sector</th><th>Department</th><th>Avg Overtime</th><th>% with Overtime</th><th>Headcount</th></tr></thead>
+      <tbody id="otTbody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let otDeptChart = null;
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const d = await fetch("/api/overtime").then(r => r.json());
+  const p = d.summary.Private, g = d.summary.Government;
+
+  document.getElementById("ot-kpis").innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Private — Avg Overtime</div>
+      <div class="kpi-value">${money(p.avg_ot)}</div>
+      <div class="kpi-sub">${p.pct_with_ot}% of employees earn overtime</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Govt — Avg Overtime</div>
+      <div class="kpi-value kpi-blue">${money(g.avg_ot)}</div>
+      <div class="kpi-sub">${g.pct_with_ot}% of employees earn overtime</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Private — Earners Only Avg</div>
+      <div class="kpi-value kpi-orange">${money(p.avg_ot_earners)}</div>
+      <div class="kpi-sub">Max: ${money(p.max_ot)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Govt — Earners Only Avg</div>
+      <div class="kpi-value">${money(g.avg_ot_earners)}</div>
+      <div class="kpi-sub">Max: ${money(g.max_ot)}</div>
+    </div>`;
+
+  new Chart(document.getElementById("otSectorChart"), {
+    type: "bar",
+    data: {
+      labels: ["Private Sector", "Government Sector"],
+      datasets: [
+        { label: "All Employees", data: [p.avg_ot, g.avg_ot], backgroundColor: ["#534AB7", "#1D9E75"], borderRadius: 6 },
+        { label: "Earners Only",  data: [p.avg_ot_earners, g.avg_ot_earners], backgroundColor: ["#AFA9EC", "#5DCAA5"], borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { y: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+  });
+
+  const genderOT = d.gender_ot;
+  new Chart(document.getElementById("otGenderChart"), {
+    type: "bar",
+    data: {
+      labels: genderOT.map(r => r.Gender === "M" ? "Male" : "Female"),
+      datasets: [
+        { label: "Avg Overtime", data: genderOT.map(r => r.avg_ot), backgroundColor: ["#534AB7", "#D85A30"], borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+  });
+
+  loadOT();
+});
+
+async function loadOT() {
+  const sector = document.getElementById("otSector").value;
+  const d = await fetch(`/api/overtime?sector=${sector}`).then(r => r.json());
+  const top15 = d.dept_ot.slice(0, 15).reverse();
+
+  if (otDeptChart) otDeptChart.destroy();
+  otDeptChart = new Chart(document.getElementById("otDeptChart"), {
+    type: "bar",
+    data: {
+      labels: top15.map(r => r.Department),
+      datasets: [
+        { label: "Avg Overtime Pay", data: top15.map(r => r.avg_ot),
+          backgroundColor: top15.map(r => r.Sector === "Private" ? "#534AB7" : "#1D9E75"), borderRadius: 4 }
+      ]
+    },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+  });
+
+  document.getElementById("otTbody").innerHTML = d.dept_ot.map(r => `
+    <tr>
+      <td><span class="badge ${r.Sector === 'Private' ? 'badge-purple' : 'badge-teal'}">${r.Sector}</span></td>
+      <td>${r.Department}</td>
+      <td class="num">${money(r.avg_ot)}</td>
+      <td class="num">${(r.pct_ot * 100).toFixed(1)}%</td>
+      <td>${fmt(r.count)}</td>
+    </tr>`).join("");
+}
+</script>
+{% endblock %}

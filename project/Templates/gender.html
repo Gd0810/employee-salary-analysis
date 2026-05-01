@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Gender Pay Gap{% endblock %}
+{% block page_title %}Gender Pay Gap Analysis{% endblock %}
+{% block page_sub %}Male vs Female salary comparison across sectors and departments{% endblock %}
+{% block content %}
+
+<div class="kpi-grid" id="gap-kpis"></div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Avg Base Salary by Gender & Sector</h3></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="genderBarChart" role="img" aria-label="Grouped bar chart of avg salary by gender and sector"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Gender Pay Gap % by Sector</h3></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="gapPctChart" role="img" aria-label="Bar chart of gender pay gap percentage"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header">
+    <h3>Pay Gap by Department (Top 15)</h3>
+    <div class="filter-row">
+      <select id="gapSector" onchange="loadDeptGap()">
+        <option value="All">All Sectors</option>
+        <option value="Private">Private</option>
+        <option value="Government">Government</option>
+      </select>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:420px"><canvas id="deptGapChart" role="img" aria-label="Horizontal bar of gender gap by department"></canvas></div>
+</div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Private Sector — Detailed</h3></div>
+    <div id="priv-detail" class="stat-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Government Sector — Detailed</h3></div>
+    <div id="govt-detail" class="stat-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let genderData = null;
+let deptGapChart = null;
+
+window.addEventListener("DOMContentLoaded", async ()=>{
+  genderData = await fetch("/api/gender").then(r=>r.json());
+  const p = genderData.Private, g = genderData.Government, all = genderData.All;
+
+  document.getElementById("gap-kpis").innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Private — Male Avg</div>
+      <div class="kpi-value">${money(p.M_avg)}</div>
+      <div class="kpi-sub">${fmt(p.M_count)} employees</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Private — Female Avg</div>
+      <div class="kpi-value">${money(p.F_avg)}</div>
+      <div class="kpi-sub">${fmt(p.F_count)} employees</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Govt — Male Avg</div>
+      <div class="kpi-value kpi-blue">${money(g.M_avg)}</div>
+      <div class="kpi-sub">${fmt(g.M_count)} employees</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Govt — Female Avg</div>
+      <div class="kpi-value kpi-orange">${money(g.F_avg)}</div>
+      <div class="kpi-sub">Gap: ${money(g.gap)} (${g.gap_pct}%)</div>
+    </div>`;
+
+  new Chart(document.getElementById("genderBarChart"),{
+    type:"bar",
+    data:{
+      labels:["Private Male","Private Female","Govt Male","Govt Female"],
+      datasets:[{
+        label:"Avg Base Salary",
+        data:[p.M_avg,p.F_avg,g.M_avg,g.F_avg],
+        backgroundColor:["#534AB7","#D85A30","#1D9E75","#EF9F27"],
+        borderRadius:6
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+
+  new Chart(document.getElementById("gapPctChart"),{
+    type:"bar",
+    data:{
+      labels:["Private","Government","Overall"],
+      datasets:[{
+        label:"Pay Gap %",
+        data:[p.gap_pct, g.gap_pct, all.gap_pct],
+        backgroundColor:["#534AB7","#1D9E75","#EF9F27"],
+        borderRadius:6
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:v=>v+"%"}}}}
+  });
+
+  const detHTML = (d) => `
+    <div class="stat-row"><span>Male avg salary</span><span>${money(d.M_avg)}</span></div>
+    <div class="stat-row"><span>Female avg salary</span><span>${money(d.F_avg)}</span></div>
+    <div class="stat-row"><span>Male median</span><span>${money(d.M_med)}</span></div>
+    <div class="stat-row"><span>Female median</span><span>${money(d.F_med)}</span></div>
+    <div class="stat-row"><span>Pay gap (M-F)</span><span class="${d.gap>0?'text-orange':''}">${money(d.gap)}</span></div>
+    <div class="stat-row"><span>Gap percentage</span><span class="${d.gap_pct>2?'text-orange':''}">${d.gap_pct}%</span></div>
+    <div class="stat-row"><span>Male count</span><span>${fmt(d.M_count)}</span></div>
+    <div class="stat-row"><span>Female count</span><span>${fmt(d.F_count)}</span></div>`;
+  document.getElementById("priv-detail").innerHTML = detHTML(p);
+  document.getElementById("govt-detail").innerHTML = detHTML(g);
+
+  loadDeptGap();
+});
+
+async function loadDeptGap() {
+  const d = await fetch("/api/gender").then(r=>r.json());
+  const gaps = d.dept_gap.sort((a,b)=>b.gap-a.gap).slice(0,15).reverse();
+  if (deptGapChart) deptGapChart.destroy();
+  deptGapChart = new Chart(document.getElementById("deptGapChart"),{
+    type:"bar",
+    data:{
+      labels: gaps.map(r=>r.Department),
+      datasets:[
+        {label:"Male Avg",   data:gaps.map(r=>r.M_avg), backgroundColor:"#534AB7", borderRadius:4},
+        {label:"Female Avg", data:gaps.map(r=>r.F_avg), backgroundColor:"#D85A30", borderRadius:4},
+      ]
+    },
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+}
+</script>
+{% endblock %}

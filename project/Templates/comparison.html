@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Sector Comparison{% endblock %}
+{% block page_title %}Cross-Sector Comparison{% endblock %}
+{% block page_sub %}Private vs Government salary metrics side by side{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="card" id="priv-card">
+    <div class="sector-label private-label">Private Sector</div>
+    <div class="big-num" id="p-base">--</div>
+    <div class="big-label">Avg Base Salary</div>
+    <div class="stat-list" id="p-stats"></div>
+  </div>
+  <div class="card" id="govt-card">
+    <div class="sector-label govt-label">Government Sector</div>
+    <div class="big-num blue" id="g-base">--</div>
+    <div class="big-label">Avg Base Salary</div>
+    <div class="stat-list" id="g-stats"></div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Salary Metrics Comparison</h3></div>
+    <div class="chart-wrap" style="height:300px"><canvas id="compBarChart" role="img" aria-label="Grouped bar chart comparing salary metrics"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Salary Spread (Box Plot Style)</h3></div>
+    <div class="chart-wrap" style="height:300px"><canvas id="spreadChart" role="img" aria-label="Range chart showing salary spread"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Total Compensation Breakdown</h3></div>
+  <div class="chart-wrap" style="height:280px"><canvas id="compStackChart" role="img" aria-label="Stacked bar of total compensation"></canvas></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded", async ()=>{
+  const d = await fetch("/api/comparison").then(r=>r.json());
+  const p = d.Private, g = d.Government;
+
+  document.getElementById("p-base").textContent = money(p.avg_base);
+  document.getElementById("g-base").textContent = money(g.avg_base);
+
+  const statHTML = (sec) => `
+    <div class="stat-row"><span>Median Base</span><span>${money(sec.median_base)}</span></div>
+    <div class="stat-row"><span>Avg Total Pay</span><span>${money(sec.avg_total)}</span></div>
+    <div class="stat-row"><span>Avg Overtime</span><span>${money(sec.avg_overtime)}</span></div>
+    <div class="stat-row"><span>Avg Longevity</span><span>${money(sec.avg_longevity)}</span></div>
+    <div class="stat-row"><span>Min Salary</span><span>${money(sec.min_base)}</span></div>
+    <div class="stat-row"><span>Max Salary</span><span>${money(sec.max_base)}</span></div>
+    <div class="stat-row"><span>Std Deviation</span><span>${money(sec.std_base)}</span></div>
+    <div class="stat-row"><span>Employee Count</span><span>${fmt(sec.count)}</span></div>`;
+  document.getElementById("p-stats").innerHTML = statHTML(p);
+  document.getElementById("g-stats").innerHTML = statHTML(g);
+
+  new Chart(document.getElementById("compBarChart"),{
+    type:"bar",
+    data:{
+      labels:["Base Salary","Total Pay","Overtime","Longevity"],
+      datasets:[
+        {label:"Private",    data:[p.avg_base,p.avg_total,p.avg_overtime,p.avg_longevity], backgroundColor:"#534AB7", borderRadius:6},
+        {label:"Government", data:[g.avg_base,g.avg_total,g.avg_overtime,g.avg_longevity], backgroundColor:"#1D9E75", borderRadius:6},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+
+  new Chart(document.getElementById("spreadChart"),{
+    type:"bar",
+    data:{
+      labels:["Private","Government"],
+      datasets:[
+        {label:"Q25–Q75 Range",data:[p.q75-p.q25,g.q75-g.q25],backgroundColor:["#534AB7","#1D9E75"],borderRadius:6},
+        {label:"Std Dev",      data:[p.std_base,g.std_base],   backgroundColor:["#AFA9EC","#5DCAA5"],borderRadius:6},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+
+  new Chart(document.getElementById("compStackChart"),{
+    type:"bar",
+    data:{
+      labels:["Private","Government"],
+      datasets:[
+        {label:"Base Salary",  data:[p.avg_base,g.avg_base],     backgroundColor:["#534AB7","#1D9E75"],borderRadius:4},
+        {label:"Overtime",     data:[p.avg_overtime,g.avg_overtime], backgroundColor:"#D85A30",borderRadius:4},
+        {label:"Longevity",    data:[p.avg_longevity,g.avg_longevity],backgroundColor:"#EF9F27",borderRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Salary Distribution{% endblock %}
+{% block page_title %}Salary Distribution{% endblock %}
+{% block page_sub %}How salaries are spread across both sectors{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><h3>Salary Distribution Histogram</h3></div>
+  <div class="chart-wrap" style="height:320px"><canvas id="histChart" role="img" aria-label="Histogram of salary distribution"></canvas></div>
+  <div class="legend-row">
+    <span class="leg-item"><span class="leg-dot" style="background:#534AB7"></span>Private</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#1D9E75"></span>Government</span>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Private Sector Percentiles</h3></div>
+    <div id="priv-percentiles"></div>
+    <div class="chart-wrap" style="height:180px;margin-top:12px"><canvas id="privPctChart" role="img" aria-label="Percentile chart private"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Government Sector Percentiles</h3></div>
+    <div id="govt-percentiles"></div>
+    <div class="chart-wrap" style="height:180px;margin-top:12px"><canvas id="govtPctChart" role="img" aria-label="Percentile chart government"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Salary Band Distribution</h3></div>
+  <div class="chart-wrap" style="height:260px"><canvas id="bandChart" role="img" aria-label="Grouped bar chart of salary bands"></canvas></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded", async ()=>{
+  const d = await fetch("/api/distribution").then(r=>r.json());
+  const p = d.Private, g = d.Government;
+
+  new Chart(document.getElementById("histChart"),{
+    type:"bar",
+    data:{
+      labels: p.labels,
+      datasets:[
+        {label:"Private",    data:p.counts, backgroundColor:"rgba(83,74,183,.7)",  borderRadius:3},
+        {label:"Government", data:g.counts, backgroundColor:"rgba(29,158,117,.7)", borderRadius:3},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{maxRotation:45,font:{size:10}}},y:{ticks:{callback:v=>fmt(v)}}}}
+  });
+
+  const percHTML = (pcts) => `
+    <div class="stat-row"><span>10th percentile</span><span>${money(pcts.p10)}</span></div>
+    <div class="stat-row"><span>25th percentile</span><span>${money(pcts.p25)}</span></div>
+    <div class="stat-row"><span>50th percentile (median)</span><span><strong>${money(pcts.p50)}</strong></span></div>
+    <div class="stat-row"><span>75th percentile</span><span>${money(pcts.p75)}</span></div>
+    <div class="stat-row"><span>90th percentile</span><span>${money(pcts.p90)}</span></div>`;
+  document.getElementById("priv-percentiles").innerHTML = percHTML(p.percentiles);
+  document.getElementById("govt-percentiles").innerHTML = percHTML(g.percentiles);
+
+  const pctData = (pcts,color)=>({
+    type:"bar",
+    data:{labels:["P10","P25","P50","P75","P90"],
+          datasets:[{data:Object.values(pcts),backgroundColor:color,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+             scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+  });
+  new Chart(document.getElementById("privPctChart"), pctData(p.percentiles,"#534AB7"));
+  new Chart(document.getElementById("govtPctChart"), pctData(g.percentiles,"#1D9E75"));
+
+  new Chart(document.getElementById("bandChart"),{
+    type:"bar",
+    data:{
+      labels:["Low","Mid-Low","Mid-High","High"],
+      datasets:[
+        {label:"Private",   data:[2500,2500,2500,2500], backgroundColor:"#534AB7",borderRadius:4},
+        {label:"Government",data:[2573,2573,2573,2572], backgroundColor:"#1D9E75",borderRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom"}},
+      scales:{y:{ticks:{callback:v=>fmt(v)}}}}
+  });
+});
+</script>
+{% endblock %}

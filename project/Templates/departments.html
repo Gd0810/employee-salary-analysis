@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Departments{% endblock %}
+{% block page_title %}Department Salary Explorer{% endblock %}
+{% block page_sub %}Drill into any department — avg pay, headcount, divisions, gender split{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3>Department Salary Rankings</h3>
+    <div class="filter-row">
+      <select id="deptSector" onchange="loadDepts()">
+        <option value="All">All Sectors</option>
+        <option value="Private">Private</option>
+        <option value="Government">Government</option>
+      </select>
+      <select id="deptSort" onchange="loadDepts()">
+        <option value="avg_base">Sort: Avg Salary</option>
+        <option value="count">Sort: Headcount</option>
+        <option value="avg_total">Sort: Total Pay</option>
+      </select>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:420px"><canvas id="deptBarChart" role="img" aria-label="Horizontal bar chart of departments by salary"></canvas></div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Department Detail — Click a bar above or search below</h3></div>
+  <div class="filter-row" style="margin-bottom:16px">
+    <input type="text" id="deptSearch" placeholder="Search department name..." style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px" oninput="searchDept()">
+  </div>
+  <div class="grid-2">
+    <div id="dept-detail-stats"></div>
+    <div class="chart-wrap" style="height:240px"><canvas id="deptDetailChart" role="img" aria-label="Division breakdown"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>All Departments — Summary Table</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Sector</th><th>Department</th><th>Avg Base</th><th>Avg Total</th><th>Avg Overtime</th><th>Headcount</th><th>Max Salary</th></tr></thead>
+      <tbody id="deptTbody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let deptData = []; let deptChart = null; let deptDetailChart = null;
+
+async function loadDepts() {
+  const sector = document.getElementById("deptSector").value;
+  const sortBy = document.getElementById("deptSort").value;
+  deptData = await fetch(`/api/departments?sector=${sector}`).then(r=>r.json());
+  deptData.sort((a,b)=>b[sortBy]-a[sortBy]);
+  const top20 = deptData.slice(0,20).reverse();
+
+  if (deptChart) deptChart.destroy();
+  deptChart = new Chart(document.getElementById("deptBarChart"),{
+    type:"bar",
+    data:{
+      labels: top20.map(d=>d.Department_Name),
+      datasets:[{
+        label:"Avg Base Salary",
+        data: top20.map(d=>d.avg_base),
+        backgroundColor: top20.map(d=>d.Sector==="Private"?"#534AB7":"#1D9E75"),
+        borderRadius:4
+      }]
+    },
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{afterLabel:c=>`Sector: ${top20[c.dataIndex].Sector} | Count: ${top20[c.dataIndex].count}`}}},
+      scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}},
+      onClick:(e,els)=>{ if(els.length) loadDeptDetail(top20[els[0].index].Department_Name); }
+    }
+  });
+
+  document.getElementById("deptTbody").innerHTML = deptData.map(d=>`
+    <tr style="cursor:pointer" onclick="loadDeptDetail('${d.Department_Name}')">
+      <td><span class="badge ${d.Sector==='Private'?'badge-purple':'badge-teal'}">${d.Sector}</span></td>
+      <td>${d.Department_Name}</td>
+      <td class="num">${money(d.avg_base)}</td>
+      <td class="num">${money(d.avg_total)}</td>
+      <td class="num">${money(d.avg_overtime)}</td>
+      <td>${fmt(d.count)}</td>
+      <td class="num">${money(d.max_salary)}</td>
+    </tr>`).join("");
+}
+
+async function loadDeptDetail(name) {
+  const d = await fetch(`/api/department/detail?dept=${encodeURIComponent(name)}`).then(r=>r.json());
+  document.getElementById("dept-detail-stats").innerHTML = `
+    <h4 style="margin-bottom:12px">${d.department}</h4>
+    <div class="stat-row"><span>Total employees</span><span>${fmt(d.total_count)}</span></div>
+    <div class="stat-row"><span>Avg base salary</span><span>${money(d.avg_base)}</span></div>
+    ${d.gender.map(g=>`<div class="stat-row"><span>${g.Gender==='M'?'Male':'Female'} avg</span><span>${money(g.avg_base)}</span></div>`).join("")}
+    <div class="stat-row"><span>Divisions</span><span>${d.divisions.length}</span></div>
+    <h5 style="margin:12px 0 8px;font-size:13px;color:#666">Top divisions</h5>
+    ${d.divisions.slice(0,5).map(v=>`<div class="stat-row"><span style="font-size:12px">${v.Division}</span><span>${money(v.avg_base)}</span></div>`).join("")}`;
+
+  if (deptDetailChart) deptDetailChart.destroy();
+  const top8 = d.divisions.slice(0,8);
+  deptDetailChart = new Chart(document.getElementById("deptDetailChart"),{
+    type:"bar",
+    data:{ labels:top8.map(v=>v.Division.split(" - ").pop()||v.Division),
+           datasets:[{label:"Avg Salary",data:top8.map(v=>v.avg_base),backgroundColor:"#534AB7",borderRadius:4}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}},y:{ticks:{font:{size:10}}}}}
+  });
+}
+
+function searchDept() {
+  const q = document.getElementById("deptSearch").value.toLowerCase();
+  const match = deptData.find(d=>d.Department_Name.toLowerCase().includes(q));
+  if (match) loadDeptDetail(match.Department_Name);
+}
+
+window.addEventListener("DOMContentLoaded", ()=>loadDepts());
+</script>
+{% endblock %}

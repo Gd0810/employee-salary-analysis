@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Longevity Pay{% endblock %}
+{% block page_title %}Longevity Pay Tracker{% endblock %}
+{% block page_sub %}Which departments and sectors reward long-term tenure{% endblock %}
+{% block content %}
+
+<div class="kpi-grid" id="lon-kpis"></div>
+
+<div class="grid-2" style="margin-top:24px">
+  <div class="card">
+    <div class="card-header"><h3>Longevity Pay — Sector Comparison</h3></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="lonSectorChart" role="img" aria-label="Bar chart of longevity by sector"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>% Employees Receiving Longevity Pay</h3></div>
+    <div class="chart-wrap" style="height:280px"><canvas id="lonPctChart" role="img" aria-label="Doughnut chart of longevity recipients"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header">
+    <h3>Longevity Pay by Department</h3>
+    <div class="filter-row">
+      <select id="lonSector" onchange="loadLon()">
+        <option value="All">All Sectors</option>
+        <option value="Private">Private</option>
+        <option value="Government">Government</option>
+      </select>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:360px"><canvas id="lonDeptChart" role="img" aria-label="Horizontal bar of longevity by dept"></canvas></div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <div class="card-header"><h3>Department Longevity Table</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Sector</th><th>Department</th><th>Avg Longevity Pay</th><th>% Receiving</th></tr></thead>
+      <tbody id="lonTbody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let lonDeptChart = null;
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const d = await fetch("/api/longevity").then(r => r.json());
+  const p = d.summary.Private, g = d.summary.Government;
+
+  document.getElementById("lon-kpis").innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Private — Avg Longevity Pay</div>
+      <div class="kpi-value">${money(p.avg_lon)}</div>
+      <div class="kpi-sub">${p.pct_with_lon}% of employees receive it</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Govt — Avg Longevity Pay</div>
+      <div class="kpi-value kpi-blue">${money(g.avg_lon)}</div>
+      <div class="kpi-sub">${g.pct_with_lon}% of employees receive it</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Private — Earners Only Avg</div>
+      <div class="kpi-value kpi-orange">${money(p.avg_lon_earners)}</div>
+      <div class="kpi-sub">Max: ${money(p.max_lon)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Govt — Earners Only Avg</div>
+      <div class="kpi-value">${money(g.avg_lon_earners)}</div>
+      <div class="kpi-sub">Max: ${money(g.max_lon)}</div>
+    </div>`;
+
+  new Chart(document.getElementById("lonSectorChart"), {
+    type: "bar",
+    data: {
+      labels: ["Private", "Government"],
+      datasets: [
+        { label: "All Employees",  data: [p.avg_lon, g.avg_lon],               backgroundColor: ["#534AB7","#1D9E75"], borderRadius: 6 },
+        { label: "Earners Only",   data: [p.avg_lon_earners, g.avg_lon_earners], backgroundColor: ["#AFA9EC","#5DCAA5"], borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { y: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+  });
+
+  new Chart(document.getElementById("lonPctChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Private w/ Longevity", "Private w/o", "Govt w/ Longevity", "Govt w/o"],
+      datasets: [{ data: [p.pct_with_lon, 100 - p.pct_with_lon, g.pct_with_lon, 100 - g.pct_with_lon],
+        backgroundColor: ["#534AB7","#AFA9EC","#1D9E75","#5DCAA5"], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "60%",
+      plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }
+  });
+
+  loadLon();
+});
+
+async function loadLon() {
+  const sector = document.getElementById("lonSector").value;
+  const d = await fetch(`/api/longevity?sector=${sector}`).then(r => r.json());
+  const top15 = d.dept_lon.slice(0, 15).reverse();
+
+  if (lonDeptChart) lonDeptChart.destroy();
+  lonDeptChart = new Chart(document.getElementById("lonDeptChart"), {
+    type: "bar",
+    data: {
+      labels: top15.map(r => r.Department),
+      datasets: [{ label: "Avg Longevity Pay", data: top15.map(r => r.avg_lon),
+        backgroundColor: top15.map(r => r.Sector === "Private" ? "#534AB7" : "#1D9E75"), borderRadius: 4 }]
+    },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+  });
+
+  document.getElementById("lonTbody").innerHTML = d.dept_lon.map(r => `
+    <tr>
+      <td><span class="badge ${r.Sector === 'Private' ? 'badge-purple' : 'badge-teal'}">${r.Sector}</span></td>
+      <td>${r.Department}</td>
+      <td class="num">${money(r.avg_lon)}</td>
+      <td class="num">${(r.pct_lon * 100).toFixed(1)}%</td>
+    </tr>`).join("");
+}
+</script>
+{% endblock %}
