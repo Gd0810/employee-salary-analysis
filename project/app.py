@@ -36,6 +36,17 @@ with open(os.path.join(MODELS, "analytics.pkl"),"rb") as f:
     analytics = pickle.load(f)
 
 df = pd.read_pickle(os.path.join(MODELS, "processed_data.pkl"))
+
+# Backward-compatible fallback: older processed_data may not include Grade_Numeric.
+if "Grade_Numeric" not in df.columns and "Grade" in df.columns:
+    df["Grade_Numeric"] = (
+        df["Grade"]
+        .astype(str)
+        .str.extract(r"(\d+)", expand=False)
+        .fillna("0")
+        .astype(int)
+    )
+
 print(f"Loaded {len(df):,} records. Ready.")
 
 # ── Helper ─────────────────────────────────────────────────────
@@ -210,7 +221,7 @@ def api_grades():
 @app.route("/api/distribution")
 def api_distribution():
     bins = list(range(0, 310000, 15000))
-    labels = [f"${b//1000}K" for b in bins[:-1]]
+    labels = [f"₹{b//1000}K" for b in bins[:-1]]
     result = {}
     for sector in ["Private", "Government"]:
         sub = df[df["Sector"]==sector]["Base_Salary"]
