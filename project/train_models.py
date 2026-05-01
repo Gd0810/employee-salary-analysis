@@ -36,8 +36,25 @@ print("="*60)
 print("\n[1/5] Loading CSV files...")
 t0 = time.time()
 
-df_priv = pd.read_csv(os.path.join(DATA, "Private_Sector_Salaries.csv"))
-df_govt = pd.read_csv(os.path.join(DATA, "government__Sector_Salaries.csv"))
+def _normalize_name(filename: str) -> str:
+    """Normalize filename for tolerant matching (case/space/underscore differences)."""
+    return filename.lower().replace(" ", "").replace("_", "")
+
+def _resolve_data_file(data_dir: str, expected_name: str) -> str:
+    expected_norm = _normalize_name(expected_name)
+    for name in os.listdir(data_dir):
+        if _normalize_name(name) == expected_norm:
+            return os.path.join(data_dir, name)
+    raise FileNotFoundError(
+        f"Could not find '{expected_name}' in {data_dir}. "
+        f"Available files: {sorted(os.listdir(data_dir))}"
+    )
+
+priv_path = _resolve_data_file(DATA, "Private_Sector_Salaries.csv")
+govt_path = _resolve_data_file(DATA, "government_Sector_Salaries.csv")
+
+df_priv = pd.read_csv(priv_path)
+df_govt = pd.read_csv(govt_path)
 
 df_priv["Sector"] = "Private"
 df_govt["Sector"] = "Government"
@@ -127,9 +144,21 @@ models_trained = {}
 
 # Random Forest
 print("  Training Random Forest...")
-rf = RandomForestRegressor(n_estimators=150, max_depth=12, min_samples_leaf=5,
-                            random_state=42, n_jobs=-1)
-rf.fit(X_train, y_train)
+rf = RandomForestRegressor(
+    n_estimators=150,
+    max_depth=12,
+    min_samples_leaf=5,
+    random_state=42,
+    n_jobs=-1,
+)
+try:
+    rf.fit(X_train, y_train)
+except PermissionError:
+    # Some restricted Windows environments block multiprocessing/thread backends.
+    # Retry with single-core execution for reliability.
+    print("    Parallel backend unavailable; retrying with n_jobs=1...")
+    rf.set_params(n_jobs=1)
+    rf.fit(X_train, y_train)
 rf_preds = rf.predict(X_test)
 rf_rmse  = np.sqrt(mean_squared_error(y_test, rf_preds))
 rf_mae   = mean_absolute_error(y_test, rf_preds)
