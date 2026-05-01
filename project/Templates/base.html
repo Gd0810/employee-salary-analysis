@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Salary Analysis{% endblock %} — SalaryIQ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">$</span>
+    <span class="logo-text">SalaryIQ</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="/" class="nav-link {% if request.path=='/' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Dashboard
+    </a></li>
+    <li><a href="/comparison" class="nav-link {% if request.path=='/comparison' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Sector Comparison
+    </a></li>
+    <li><a href="/gender" class="nav-link {% if request.path=='/gender' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Gender Pay Gap
+    </a></li>
+    <li><a href="/departments" class="nav-link {% if request.path=='/departments' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Departments
+    </a></li>
+    <li><a href="/grades" class="nav-link {% if request.path=='/grades' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Pay Grades
+    </a></li>
+    <li><a href="/distribution" class="nav-link {% if request.path=='/distribution' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Distribution
+    </a></li>
+    <li><a href="/overtime" class="nav-link {% if request.path=='/overtime' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Overtime
+    </a></li>
+    <li><a href="/longevity" class="nav-link {% if request.path=='/longevity' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Longevity Pay
+    </a></li>
+    <li class="nav-divider"></li>
+    <li><a href="/prediction" class="nav-link {% if request.path=='/prediction' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Salary Predictor
+    </a></li>
+    <li><a href="/calculator" class="nav-link {% if request.path=='/calculator' %}active{% endif %}">
+      <span class="nav-icon">⬛</span> Comp Calculator
+    </a></li>
+  </ul>
+  <div class="sidebar-footer">
+    <span>20,291 employees</span>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+      <p class="page-sub">{% block page_sub %}{% endblock %}</p>
+    </div>
+    {% block header_actions %}{% endblock %}
+  </div>
+  <div class="page-body">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
