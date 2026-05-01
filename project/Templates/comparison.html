@@ -4,16 +4,20 @@
 {% block page_sub %}Private vs Government salary metrics side by side{% endblock %}
 {% block content %}
 <div class="grid-2">
-  <div class="card" id="priv-card">
-    <div class="sector-label private-label">Private Sector</div>
-    <div class="big-num" id="p-base">--</div>
-    <div class="big-label">Avg Base Salary</div>
+  <div class="card sector-summary-card" id="priv-card">
+    <div class="sector-summary-head">
+      <div class="sector-label private-label">Private Sector</div>
+      <div class="big-num" id="p-base">--</div>
+      <div class="big-label">Avg Base Salary</div>
+    </div>
     <div class="stat-list" id="p-stats"></div>
   </div>
-  <div class="card" id="govt-card">
-    <div class="sector-label govt-label">Government Sector</div>
-    <div class="big-num blue" id="g-base">--</div>
-    <div class="big-label">Avg Base Salary</div>
+  <div class="card sector-summary-card" id="govt-card">
+    <div class="sector-summary-head">
+      <div class="sector-label govt-label">Government Sector</div>
+      <div class="big-num blue" id="g-base">--</div>
+      <div class="big-label">Avg Base Salary</div>
+    </div>
     <div class="stat-list" id="g-stats"></div>
   </div>
 </div>
