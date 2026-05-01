@@ -1,11 +1,11 @@
 /* ── Global utility functions used across all pages ─────────── */
 
 /**
- * Format a number as US currency: $1,234,567
+ * Format a number as US currency: ₹1,234,567
  */
 function money(val) {
-  if (val === null || val === undefined || isNaN(val)) return "$--";
-  return "$" + Number(val).toLocaleString("en-US", {
+  if (val === null || val === undefined || isNaN(val)) return "₹--";
+  return "₹" + Number(val).toLocaleString("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   });
@@ -68,7 +68,7 @@ if (typeof Chart !== "undefined") {
       if (label) label += ": ";
       const val = context.parsed.y ?? context.parsed.x ?? context.raw;
       if (typeof val === "number" && val > 1000) {
-        label += "$" + val.toLocaleString("en-US", { maximumFractionDigits: 0 });
+        label += "₹" + val.toLocaleString("en-US", { maximumFractionDigits: 0 });
       } else {
         label += val;
       }

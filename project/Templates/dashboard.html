@@ -111,7 +111,7 @@ async function loadCharts() {
       ]
     },
     options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{ ticks:{ callback: v=>"$"+Math.round(v/1000)+"K" } } } }
+      scales:{ y:{ ticks:{ callback: v=>"₹"+Math.round(v/1000)+"K" } } } }
   });
 
   new Chart(document.getElementById("genderChart"), {
@@ -132,7 +132,7 @@ async function loadCharts() {
       {label:"Longevity",data:[priv.avg_longevity], backgroundColor:"#EF9F27", borderRadius:4},
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},
-      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 
   new Chart(document.getElementById("compGovtChart"),{
@@ -143,7 +143,7 @@ async function loadCharts() {
       {label:"Longevity",data:[govt.avg_longevity], backgroundColor:"#EF9F27", borderRadius:4},
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},
-      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 }
 
@@ -163,7 +163,7 @@ async function loadTopDepts() {
     },
     options:{indexAxis:"y", responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}},y:{ticks:{font:{size:11}}}}}
+      scales:{x:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}},y:{ticks:{font:{size:11}}}}}
   });
 }
 

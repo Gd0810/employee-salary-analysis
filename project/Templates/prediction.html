@@ -172,7 +172,7 @@ async function loadModelMetrics() {
   new Chart(document.getElementById("modelMetricsChart"), {
     type: "bar",
     data: {
-      labels: ["R² Score", "MAE ($K)"],
+      labels: ["R² Score", "MAE (₹K)"],
       datasets: [
         { label: "Random Forest", data: [d.rf_r2 * 100, d.rf_mae / 1000], backgroundColor: "#534AB7", borderRadius: 6 },
         { label: "Ridge",         data: [d.ridge_r2 * 100, 0],             backgroundColor: "#1D9E75", borderRadius: 6 },

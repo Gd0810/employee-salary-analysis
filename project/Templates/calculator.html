@@ -21,15 +21,15 @@
         <select id="calc-dept"></select>
       </div>
       <div class="form-group">
-        <label>Base Salary ($)</label>
+        <label>Base Salary (₹)</label>
         <input type="number" id="calc-base" placeholder="e.g. 85000" min="0" max="400000" oninput="runCalc()">
       </div>
       <div class="form-group">
-        <label>Overtime Pay ($)</label>
+        <label>Overtime Pay (₹)</label>
         <input type="number" id="calc-ot" placeholder="e.g. 5000" min="0" value="0" oninput="runCalc()">
       </div>
       <div class="form-group">
-        <label>Longevity Pay ($)</label>
+        <label>Longevity Pay (₹)</label>
         <input type="number" id="calc-lon" placeholder="e.g. 0" min="0" value="0" oninput="runCalc()">
       </div>
       <button class="btn-predict" onclick="runCalc()">💰 Calculate</button>
@@ -80,9 +80,9 @@
       <div class="band-marker" id="band-marker" style="left:0%">▼</div>
     </div>
     <div class="band-labels">
-      <span id="band-q25">$Q25</span>
-      <span id="band-q50">$Q50</span>
-      <span id="band-q75">$Q75</span>
+      <span id="band-q25">₹Q25</span>
+      <span id="band-q50">₹Q50</span>
+      <span id="band-q75">₹Q75</span>
     </div>
   </div>
   <p class="band-result" id="band-result" style="margin-top:12px;font-size:14px;color:#666;text-align:center"></p>
@@ -168,7 +168,7 @@ async function runCalc() {
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: "bottom" } },
-      scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+      scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => "₹"+Math.round(v / 1000) + "K" } } } }
   });
 
   // Band marker — map base salary to 0–100% between Q25 and Q75

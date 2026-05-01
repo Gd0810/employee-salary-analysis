@@ -65,7 +65,7 @@ window.addEventListener("DOMContentLoaded", async ()=>{
     data:{labels:["P10","P25","P50","P75","P90"],
           datasets:[{data:Object.values(pcts),backgroundColor:color,borderRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-             scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+             scales:{y:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
   new Chart(document.getElementById("privPctChart"), pctData(p.percentiles,"#534AB7"));
   new Chart(document.getElementById("govtPctChart"), pctData(g.percentiles,"#1D9E75"));

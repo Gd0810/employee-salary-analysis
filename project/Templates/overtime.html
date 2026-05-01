@@ -84,7 +84,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: "bottom" } },
-      scales: { y: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+      scales: { y: { ticks: { callback: v => "₹"+Math.round(v / 1000) + "K" } } } }
   });
 
   const genderOT = d.gender_ot;
@@ -98,7 +98,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+      scales: { y: { ticks: { callback: v => "₹"+Math.round(v / 1000) + "K" } } } }
   });
 
   loadOT();
@@ -121,7 +121,7 @@ async function loadOT() {
     },
     options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { x: { ticks: { callback: v => "$" + Math.round(v / 1000) + "K" } } } }
+      scales: { x: { ticks: { callback: v => "₹"+Math.round(v / 1000) + "K" } } } }
   });
 
   document.getElementById("otTbody").innerHTML = d.dept_ot.map(r => `

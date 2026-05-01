@@ -67,7 +67,7 @@ window.addEventListener("DOMContentLoaded", async ()=>{
     },
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:"bottom"}},
-      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{y:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 
   new Chart(document.getElementById("spreadChart"),{
@@ -81,7 +81,7 @@ window.addEventListener("DOMContentLoaded", async ()=>{
     },
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:"bottom"}},
-      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{y:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 
   new Chart(document.getElementById("compStackChart"),{
@@ -96,7 +96,7 @@ window.addEventListener("DOMContentLoaded", async ()=>{
     },
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:"bottom"}},
-      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 });
 </script>

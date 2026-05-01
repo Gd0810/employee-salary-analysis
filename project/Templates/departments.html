@@ -71,7 +71,7 @@ async function loadDepts() {
     options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{afterLabel:c=>`Sector: ${top20[c.dataIndex].Sector} | Count: ${top20[c.dataIndex].count}`}}},
-      scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}},
+      scales:{x:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}},
       onClick:(e,els)=>{ if(els.length) loadDeptDetail(top20[els[0].index].Department_Name); }
     }
   });
@@ -106,7 +106,7 @@ async function loadDeptDetail(name) {
     data:{ labels:top8.map(v=>v.Division.split(" - ").pop()||v.Division),
            datasets:[{label:"Avg Salary",data:top8.map(v=>v.avg_base),backgroundColor:"#534AB7",borderRadius:4}]},
     options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}},y:{ticks:{font:{size:10}}}}}
+      plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}},y:{ticks:{font:{size:10}}}}}
   });
 }
 

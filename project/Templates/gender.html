@@ -88,7 +88,7 @@ window.addEventListener("DOMContentLoaded", async ()=>{
     },
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{y:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 
   new Chart(document.getElementById("gapPctChart"),{
@@ -137,7 +137,7 @@ async function loadDeptGap() {
     },
     options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:"bottom"}},
-      scales:{x:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{x:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 }
 </script>

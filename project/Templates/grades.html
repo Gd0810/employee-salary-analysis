@@ -65,7 +65,7 @@ async function loadGrades() {
     },
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:"bottom"}},
-      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}},x:{title:{display:true,text:"Grade (numeric)"}}}}
+      scales:{y:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}},x:{title:{display:true,text:"Grade (numeric)"}}}}
   });
 
   if (gradeRangeChart) gradeRangeChart.destroy();
@@ -81,7 +81,7 @@ async function loadGrades() {
     },
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:"bottom"}},
-      scales:{y:{ticks:{callback:v=>"$"+Math.round(v/1000)+"K"}}}}
+      scales:{y:{ticks:{callback:v=>"₹"+Math.round(v/1000)+"K"}}}}
   });
 
   if (gradeCountChart) gradeCountChart.destroy();
