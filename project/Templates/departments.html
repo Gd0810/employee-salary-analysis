@@ -24,12 +24,12 @@
 
 <div class="card" style="margin-top:24px">
   <div class="card-header"><h3>Department Detail — Click a bar above or search below</h3></div>
-  <div class="filter-row" style="margin-bottom:16px">
-    <input type="text" id="deptSearch" placeholder="Search department name..." style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px" oninput="searchDept()">
+  <div class="filter-row dept-detail-search">
+    <input type="text" id="deptSearch" class="dept-search-input" placeholder="Search department name..." oninput="searchDept()">
   </div>
-  <div class="grid-2">
-    <div id="dept-detail-stats"></div>
-    <div class="chart-wrap" style="height:240px"><canvas id="deptDetailChart" role="img" aria-label="Division breakdown"></canvas></div>
+  <div class="grid-2 dept-detail-grid">
+    <div id="dept-detail-stats" class="stat-list dept-detail-stats"></div>
+    <div class="chart-wrap dept-detail-chart"><canvas id="deptDetailChart" role="img" aria-label="Division breakdown"></canvas></div>
   </div>
 </div>
 

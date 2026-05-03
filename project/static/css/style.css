@@ -70,6 +70,22 @@ body { font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
 .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .filter-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--card-bg); color: var(--text); outline: none; cursor: pointer; }
 .filter-row select:focus { border-color: var(--purple); }
+.dept-detail-search { padding: 14px 18px 2px; margin-bottom: 0; }
+.dept-search-input {
+  flex: 1;
+  min-width: 260px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--card-bg);
+  color: var(--text);
+  outline: none;
+}
+.dept-search-input:focus { border-color: var(--purple); }
+.dept-detail-grid { padding: 0 18px 16px; align-items: stretch; }
+.dept-detail-stats { padding: 0; }
+.dept-detail-chart { height: 240px; padding: 0; }
 
 /* ── Tables ──────────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; max-height: 440px; }
